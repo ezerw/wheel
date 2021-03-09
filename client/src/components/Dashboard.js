@@ -1,7 +1,7 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import axios from "axios";
 import dayjs from 'dayjs';
-import { Icon, InlineIcon } from "@iconify/react";
+import { InlineIcon } from "@iconify/react";
 import barChart from '@iconify-icons/emojione-v1/bar-chart';
 import constructionIcon from '@iconify-icons/emojione-v1/construction';
 import {Navbar, Nav, Card, Col, Row} from "react-bootstrap";
