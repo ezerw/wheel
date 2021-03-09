@@ -1,0 +1,37 @@
+@import url('https://fonts.googleapis.com/css?family=Bangers');
+
+/* make the customizations */
+$body-bg: #f5f8fa;
+$card-border-color: #fff;
+
+html, body, #root{
+  height: 100%;
+}
+
+.weird-font {
+  font-family: 'Bangers', cursive;
+  &.big {
+    font-size: 3.9em;
+  }
+}
+
+.wheel {
+  text-align: center;
+  width: 500px;
+  height: 500px;
+  position: relative;
+
+  .spin {
+    font-size: 1.9em;
+    position: absolute;
+    top: 41%;
+    left: 42%;
+    text-align: center;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 50%;
+  }
+}
+
+//Import bootstrap
+@import "~bootstrap/scss/bootstrap";
