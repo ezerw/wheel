@@ -4,7 +4,6 @@ import (
 	"os"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -58,7 +57,7 @@ func Init() (*sqlx.DB, error) {
 		team_id INT NOT NULL,
 		date DATE NOT NULL,
 		created_at DATE NOT NULL,
-		UNIQUE(person_id, date),
+		UNIQUE(team_id, date),
 		FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
 	);`
 	db.MustExec(createTurnsTableSQL)
