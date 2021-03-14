@@ -1,9 +1,10 @@
 import React, {useRef, useEffect, useState} from 'react'
 import party from 'party-js'
+import Card from 'react-bootstrap/Card';
 import Modal from './Modal'
 import spinner from '../spinner'
 
-const Wheel = ({team, whoIsNext}) => {
+const Wheel = ({colors, team, whoIsNext}) => {
   const [show, setShow] = useState(false);
   const [selected, setSelected] = useState('');
 
@@ -11,38 +12,46 @@ const Wheel = ({team, whoIsNext}) => {
   const refResult = useRef(null)
   const refTrigger = useRef(null)
 
-  const handleSaved = () => {
-    setShow(false);
-  }
-  const throwConfetti = () => party.element(document.body, {
-    color: ["#F87171", "#FCD34D", "#60A5FA", "#FBBF24", "#34D399", "#818CF8", "#F472B6", "#93C5FD"],
-    count: party.variation(150, 0.5),
-    size: party.minmax(6, 10),
-    velocity: party.minmax(-300, -600)
-  });
-
   useEffect(() => {
     const handleShow = (s) => {
       setSelected(s)
-      throwConfetti()
+      party.element(document.body, {
+        color: colors,
+        count: party.variation(150, 0.5),
+        size: party.minmax(6, 10),
+        velocity: party.minmax(-300, -600)
+      });
       setShow(true);
     }
-    spinner(team.people, refWheel.current, refResult.current, refTrigger.current, handleShow)
-  }, [team])
+
+    spinner(
+      colors,
+      team.people,
+      refWheel.current,
+      refResult.current,
+      refTrigger.current,
+      handleShow
+    )
+  }, [colors, team])
 
   return (
     <>
-      <div className="wheel weird-font" ref={refWheel}>
-        <div className="spin">
-          <a href="/#" ref={refTrigger}>Spin</a>
-        </div>
-      </div>
+      <Card className="shadow-sm">
+        <Card.Body>
+          <Card.Title>Wheel</Card.Title>
+          <div className="wheel weird-font" ref={refWheel}>
+            <div className="spin">
+              <a href="/#" ref={refTrigger}>Spin</a>
+            </div>
+          </div>
+        </Card.Body>
+      </Card>
 
       <Modal
         team={team}
         selected={selected}
         show={show}
-        handleSaved={handleSaved}
+        handleSaved={() => setShow(false)}
         whoIsNext={whoIsNext}/>
     </>
   );

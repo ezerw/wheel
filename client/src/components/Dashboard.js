@@ -1,26 +1,36 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import axios from "axios";
-import dayjs from 'dayjs';
-import { InlineIcon } from "@iconify/react";
-import barChart from '@iconify-icons/emojione-v1/bar-chart';
-import constructionIcon from '@iconify-icons/emojione-v1/construction';
-import {Navbar, Nav, Card, Col, Row} from "react-bootstrap";
+import {Navbar, Nav, Col, Row} from "react-bootstrap";
 
 import LogoutButton from './LogoutButton';
 import {useGoogleAuth} from "../google-auth";
-import Wheel from "./Wheel";
-import StandUp from "./StandUp";
+import Wheel from './Wheel';
+import StandUp from './StandUp';
+import Stats from './Stats'
+import Next from "./Next";
+import LastThree from "./LastThree";
 
 const Dashboard = () => {
   const {isInitialized, signOut} = useGoogleAuth();
-  const [team, setTeam] = useState()
-  const [next, setNext] = useState()
+  const [team, setTeam] = useState();
+  const [next, setNext] = useState();
+  const [lastThree, setLastThree] = useState();
 
   const handleSignOut = useCallback(() => {
     localStorage.removeItem('token')
     signOut()
-  }, [signOut])
+  }, [signOut]);
 
+  const colors = [
+    "#F87171",
+    "#FCD34D",
+    "#60A5FA",
+    "#FBBF24",
+    "#34D399",
+    "#818CF8",
+    "#F472B6",
+    "#93C5FD"
+  ];
 
   useEffect(() => {
     const getTeam = () => {
@@ -40,9 +50,12 @@ const Dashboard = () => {
 
   useEffect(() => {
     const getNextTurn = () => {
-      axios.get(`${process.env.REACT_APP_API_URL}/teams/1/turns?limit=1&order=desc`)
+      axios.get(`${process.env.REACT_APP_API_URL}/teams/1/turns?limit=4&order=desc`)
         .then(res => {
-          setNext(res.data.data[0])
+          const data = res.data.data
+          const next = data.shift()
+          setNext(next)
+          setLastThree(data)
         })
         .catch(err => {
           console.log("Error: ", err.response)
@@ -64,69 +77,29 @@ const Dashboard = () => {
             </Navbar.Brand>
             <Navbar.Toggle aria-controls="basic-navbar-nav"/>
             <Navbar.Collapse id="basic-navbar-nav">
-              <Nav className="mr-auto">
-              </Nav>
+              <Nav className="mr-auto"/>
               <LogoutButton/>
             </Navbar.Collapse>
           </div>
         </Navbar>
         <div className="container">
           <Row className="my-2">
-            <Col md={4}>
-              <Card className="shadow-sm border-0" bg={'info'} text={'white'}>
-                <Card.Body>
-                  <Card.Title className="text-center">{
-                    next && dayjs(next.date).format("dddd DD, MMMM YYYY")
-                  }</Card.Title>
-                  <div className="text-center">
-                    {!next ? 'Loading...' : (
-                      <h3 className="m-0 big weird-font">{next.person.first_name}</h3>
-                    )}
-                  </div>
-                </Card.Body>
-              </Card>
+            <Col md={3}>
+              {next && <Next next={next}/>}
             </Col>
-            <Col md={4}>
-              <Card bg={'white'} className="shadow-sm border-0">
-                <Card.Body>
-                  <Card.Title>
-                    Something
-                  </Card.Title>
-                  Maybe a graph? <InlineIcon width={42} icon={barChart} />
-                </Card.Body>
-              </Card>
+            <Col md={3}>
+              {lastThree && <LastThree lastThree={lastThree}/>}
             </Col>
-            <Col md={4}>
-              <Card bg={'white'} className="shadow-sm border-0">
-                <Card.Body>
-                  <Card.Title>
-                    Something else
-                  </Card.Title>
-                  I don't know what else <InlineIcon width={42} icon={constructionIcon} />
-                </Card.Body>
-              </Card>
+            <Col md={6}>
+              {team && <Stats colors={colors} team={team}/>}
             </Col>
           </Row>
           <Row className="my-4">
             <Col md={6}>
-              <Card className="shadow-sm">
-                <Card.Body>
-                  <Card.Title>
-                    <h4>Wheel</h4>
-                  </Card.Title>
-                  {team && <Wheel team={team} whoIsNext={setNext} />}
-                </Card.Body>
-              </Card>
+              {team && <Wheel colors={colors} team={team} whoIsNext={setNext}/>}
             </Col>
             <Col md={6}>
-              <Card className="shadow-sm">
-                <Card.Body>
-                  <Card.Title>
-                    <h4>StandUp</h4>
-                  </Card.Title>
-                  {team && <StandUp people={team.people} />}
-                </Card.Body>
-              </Card>
+              {team && <StandUp people={team.people}/>}
             </Col>
           </Row>
         </div>

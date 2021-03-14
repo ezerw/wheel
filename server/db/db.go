@@ -58,7 +58,7 @@ func Init() (*sqlx.DB, error) {
 		team_id INT NOT NULL,
 		date DATE NOT NULL,
 		created_at DATE NOT NULL,
-		UNIQUE(team_id, date),
+		UNIQUE(person_id, date),
 		FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
 	);`
 	db.MustExec(createTurnsTableSQL)

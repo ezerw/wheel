@@ -40,37 +40,35 @@ const StandUp = ({people}) => {
   }, [people, sortType]);
 
   return (
-    <div className="StandUp">
-
-      <Row>
-        <Col md={4}>
-          <Card.Title>Standup order</Card.Title>
-        </Col>
-        <Col className="text-right">
-          <Form>
-            <Form.Row className="justify-content-end">
-              <Col xs="auto">
-                <Form.Control as="select" size="sm" onChange={(e) => setSortType(e.target.value)}>
-                  <option value="first_name">First name</option>
-                  <option value="last_name">Last name</option>
-                </Form.Control>
-              </Col>
-              <Col xs="auto">
-                <Button variant="outline-dark" size="sm" onClick={randomize}>Random</Button>
-              </Col>
-            </Form.Row>
-          </Form>
-        </Col>
-      </Row>
-      <ListGroup variant="flush">
-        {data.map(person => (
-          <ListGroup.Item className="standup-item" key={person.id}>
-            {person.first_name} {person.last_name}
-          </ListGroup.Item>
-        ))}
-      </ListGroup>
-
-    </div>
+    <Card className="shadow-sm">
+      <Card.Body>
+        <Card.Title>Standup</Card.Title>
+        <Row>
+          <Col offset={4} className="text-right">
+            <Form>
+              <Form.Row className="justify-content-end">
+                <Col xs="auto">
+                  <Form.Control as="select" size="sm" onChange={(e) => setSortType(e.target.value)}>
+                    <option value="first_name">First name</option>
+                    <option value="last_name">Last name</option>
+                  </Form.Control>
+                </Col>
+                <Col xs="auto">
+                  <Button variant="outline-dark" size="sm" onClick={randomize}>Random</Button>
+                </Col>
+              </Form.Row>
+            </Form>
+          </Col>
+        </Row>
+        <ListGroup variant="flush">
+          {data.map(person => (
+            <ListGroup.Item className="standup-item" key={person.id}>
+              {person.first_name} {person.last_name}
+            </ListGroup.Item>
+          ))}
+        </ListGroup>
+      </Card.Body>
+    </Card>
   );
 }
 

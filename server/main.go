@@ -35,13 +35,13 @@ func main() {
 	r.DELETE("/teams/:team-id", handler.TeamDelete)
 
 	// team people
-	r.POST("/teams/:team-id/people", handler.TeamAddPerson)
-	r.DELETE("/teams/:team-id/people/:person-id", handler.TeamDeletePerson)
+	r.POST("/teams/:team-id/people", handler.AddPerson)
+	r.DELETE("/teams/:team-id/people/:person-id", handler.DeletePerson)
 
 	// team turns
-	r.GET("/teams/:team-id/turns", handler.TeamTurnList)
-	r.POST("/teams/:team-id/turns", handler.TeamTurnCreate)
-	r.DELETE("/teams/:team-id/turns/:turn-id", handler.TeamTurnDelete)
+	r.GET("/teams/:team-id/turns", handler.TurnList)
+	r.POST("/teams/:team-id/turns", handler.TurnCreate)
+	r.DELETE("/teams/:team-id/turns/:turn-id", handler.TurnDelete)
 
 	_ = r.Run()
 }

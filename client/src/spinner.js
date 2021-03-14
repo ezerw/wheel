@@ -6,22 +6,13 @@ const getRandomInt = (min, max) => {
   return Math.floor(Math.random() * (max - min)) + min;
 }
 
-const spinner = (people, refChart, refResult, refTrigger, handleShow) => {
+const spinner = (colors, people, refChart, refResult, refTrigger, handleShow) => {
   const padding = {top: 20, right: 20, bottom: 20, left: 20};
   const width = 500 - padding.left - padding.right;
   const height = 500 - padding.top - padding.bottom;
   const radius = Math.min(width, height) / 2;
   const spins = 3;
-  const color = d3.scaleOrdinal([
-    "#F87171",
-    "#FCD34D",
-    "#60A5FA",
-    "#FBBF24",
-    "#34D399",
-    "#818CF8",
-    "#F472B6",
-    "#93C5FD"
-  ]);
+  const color = d3.scaleOrdinal(colors);
 
   let svg = d3.select(refChart).selectAll('svg').data([null]);
   svg = svg

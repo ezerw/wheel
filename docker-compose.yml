@@ -11,6 +11,7 @@ services:
       MYSQL_USER: wheel
       MYSQL_PASSWORD: secret
       MYSQL_DATABASE: wheel
+      TZ: Pacific/Auckland
     volumes:
       - data:/var/lib/mysql
     networks:
