@@ -1,9 +1,26 @@
 package handler
 
 import (
+	"github.com/ezerw/wheel/db"
+	"github.com/gin-gonic/gin"
+	"time"
 	_ "time/tzdata" // required
 
 )
+
+func (s *Server) HandleListTurns(c *gin.Context) {
+
+	args := db.ListTurnsParams{
+		TeamID: 0,
+		Date:   time.Time{},
+		Date_2: time.Time{},
+		Limit:  0,
+		Offset: 0,
+	}
+
+	turns, err := s.turnsService.ListTurns(c.Request, )
+
+}
 
 //var dateLayout = "2006-01-02"
 

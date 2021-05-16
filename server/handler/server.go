@@ -14,6 +14,8 @@ type Server struct {
 	config        util.Config
 	router        *gin.Engine
 	peopleService *service.People
+	teamsService  *service.Teams
+	turnsService  *service.Turns
 }
 
 // NewServer creates a new HTTP server and set up routing.
@@ -21,6 +23,8 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 	server := &Server{
 		config:        config,
 		peopleService: service.NewPeople(store),
+		teamsService:  service.NewTeams(store),
+		turnsService:  service.NewTurns(store),
 	}
 
 	server.setupRouter()
@@ -39,11 +43,11 @@ func (s *Server) setupRouter() {
 	auth := router.Group("/api")
 
 	// teams
-	//auth.GET("/teams", s.HandleListTeams)
-	//auth.GET("/teams/:team-id", s.HandleShowTeam)
-	//auth.POST("/teams", s.HandleAddTeam)
-	//auth.PUT("/teams/:team-id", s.HandleUpdateTeam)
-	//auth.DELETE("/teams/:team-id", s.HandleDeleteTeam)
+	auth.GET("/teams", s.HandleListTeams)
+	auth.GET("/teams/:team-id", s.HandleShowTeam)
+	auth.POST("/teams", s.HandleAddTeam)
+	auth.PUT("/teams/:team-id", s.HandleUpdateTeam)
+	auth.DELETE("/teams/:team-id", s.HandleDeleteTeam)
 
 	// team people
 	auth.GET("/teams/:team-id/people", s.HandleListPeople)
@@ -51,11 +55,11 @@ func (s *Server) setupRouter() {
 	auth.POST("/teams/:team-id/people", s.HandleAddPerson)
 	auth.PUT("/teams/:team-id/people/:person-id", s.HandleUpdatePerson)
 	auth.DELETE("/teams/:team-id/people/:person-id", s.HandleDeletePerson)
-	//
-	//// team turns
-	//auth.GET("/teams/:team-id/turns", h.ListTurns)
-	//auth.POST("/teams/:team-id/turns", h.CreateTurn)
-	//auth.DELETE("/teams/:team-id/turns/:turn-id", h.DeleteTurn)
+
+	// team turns
+	auth.GET("/teams/:team-id/turns", s.HandleListTurns)
+	auth.POST("/teams/:team-id/turns", s.HandleAddTurn)
+	auth.DELETE("/teams/:team-id/turns/:turn-id", s.HandleDeleteTurn)
 
 	s.router = router
 }

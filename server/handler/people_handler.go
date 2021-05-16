@@ -134,10 +134,11 @@ func (s *Server) HandleUpdatePerson(c *gin.Context) {
 	}
 
 	// Check if the person exists in the specified team
-	person, err := s.peopleService.GetPerson(c.Request.Context(), db.GetPersonParams{
+	getPersonArgs := db.GetPersonParams{
 		ID:     intPersonID,
 		TeamID: intTeamID,
-	})
+	}
+	person, err := s.peopleService.GetPerson(c.Request.Context(), getPersonArgs)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
@@ -149,7 +150,7 @@ func (s *Server) HandleUpdatePerson(c *gin.Context) {
 		return
 	}
 
-	args := db.UpdatePersonParams{
+	updatePersonArgs := db.UpdatePersonParams{
 		FirstName: binding.FirstName,
 		LastName:  binding.LastName,
 		Email:     binding.Email,
@@ -157,7 +158,7 @@ func (s *Server) HandleUpdatePerson(c *gin.Context) {
 		ID:        intPersonID,
 	}
 
-	person, err = s.peopleService.UpdatePerson(c.Request.Context(), args)
+	person, err = s.peopleService.UpdatePerson(c.Request.Context(), updatePersonArgs)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

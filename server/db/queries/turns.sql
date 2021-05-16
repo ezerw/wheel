@@ -2,7 +2,11 @@
 SELECT id, person_id, team_id, date, created_at
 FROM turns
 WHERE team_id = ?
-ORDER BY date DESC;
+AND date >= ?
+AND date <= ?
+ORDER BY date DESC
+LIMIT ?
+OFFSET ?;
 
 -- name: GetTurn :one
 SELECT id, person_id, team_id, date, created_at

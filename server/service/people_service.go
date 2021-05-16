@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-
 	"github.com/ezerw/wheel/db"
 )
 

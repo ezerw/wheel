@@ -19,7 +19,7 @@ type Querier interface {
 	GetTurn(ctx context.Context, arg GetTurnParams) (Turn, error)
 	ListPeople(ctx context.Context, teamID int64) ([]Person, error)
 	ListTeams(ctx context.Context) ([]Team, error)
-	ListTurns(ctx context.Context, teamID int64) ([]Turn, error)
+	ListTurns(ctx context.Context, arg ListTurnsParams) ([]Turn, error)
 	UpdatePerson(ctx context.Context, arg UpdatePersonParams) (sql.Result, error)
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) (sql.Result, error)
 	UpdateTurn(ctx context.Context, arg UpdateTurnParams) (sql.Result, error)

@@ -70,11 +70,29 @@ const listTurns = `-- name: ListTurns :many
 SELECT id, person_id, team_id, date, created_at
 FROM turns
 WHERE team_id = ?
+AND date >= ?
+AND date <= ?
 ORDER BY date DESC
+LIMIT ?
+OFFSET ?
 `
 
-func (q *Queries) ListTurns(ctx context.Context, teamID int64) ([]Turn, error) {
-	rows, err := q.db.QueryContext(ctx, listTurns, teamID)
+type ListTurnsParams struct {
+	TeamID int64     `json:"team_id"`
+	Date   time.Time `json:"date"`
+	Date_2 time.Time `json:"date_2"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+func (q *Queries) ListTurns(ctx context.Context, arg ListTurnsParams) ([]Turn, error) {
+	rows, err := q.db.QueryContext(ctx, listTurns,
+		arg.TeamID,
+		arg.Date,
+		arg.Date_2,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}
