@@ -1,48 +1,36 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
+	"database/sql"
+	"log"
+
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/joho/godotenv"
 
 	"github.com/ezerw/wheel/db"
 	"github.com/ezerw/wheel/handler"
-	"github.com/ezerw/wheel/middleware"
+	"github.com/ezerw/wheel/util"
 )
 
 func main() {
-	err := godotenv.Load()
+	config, err := util.LoadConfig(".")
 	if err != nil {
-		panic("Error loading .env file")
+		log.Fatal("cannot load config:", err)
 	}
 
-	conn, err := db.Init()
+	conn, err := sql.Open("mysql", config.DSN)
 	if err != nil {
-		panic(err)
+		log.Fatal("cannot connect to db:", err)
 	}
-
 	defer conn.Close()
 
-	h := handler.Handler{DB: conn}
+	store := db.NewStore(conn)
+	server, err := handler.NewServer(config, store)
+	if err != nil {
+		log.Fatal("cannot create server:", err)
+	}
 
-	r := gin.Default()
-	r.Use(middleware.Cors())
-	r.Use(middleware.Authenticated()) // require a session for api endpoints
-
-	// teams
-	r.GET("/teams", h.TeamList)
-	r.GET("/teams/:team-id", h.TeamShow)
-	r.POST("/teams", h.TeamCreate)
-	r.DELETE("/teams/:team-id", h.TeamDelete)
-
-	// team people
-	r.POST("/teams/:team-id/people", h.AddPerson)
-	r.DELETE("/teams/:team-id/people/:person-id", h.DeletePerson)
-
-	// team turns
-	r.GET("/teams/:team-id/turns", h.TurnList)
-	r.POST("/teams/:team-id/turns", h.TurnCreate)
-	r.DELETE("/teams/:team-id/turns/:turn-id", h.TurnDelete)
-
-	_ = r.Run()
+	err = server.Start(config.ServerAddress)
+	if err != nil {
+		log.Fatal("cannot start server:", err)
+	}
 }

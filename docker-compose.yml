@@ -16,15 +16,6 @@ services:
     networks:
       - wheelnet
 
-  app:
-    container_name: wheel_app
-    build: .
-    ports:
-      - 8080:8080
-    restart: on-failure
-    networks:
-      - wheelnet
-
 networks:
   wheelnet:
     driver: bridge

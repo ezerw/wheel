@@ -5,7 +5,7 @@ node_modules
 /coverage
 /build
 
-.env
+app.env
 
 # Misc
 .DS_Store
