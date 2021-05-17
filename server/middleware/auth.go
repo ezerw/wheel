@@ -2,11 +2,12 @@ package middleware
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 )
 
 func Authenticated() gin.HandlerFunc {

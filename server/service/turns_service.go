@@ -2,8 +2,9 @@ package service
 
 import (
 	"context"
-	"github.com/ezerw/wheel/db"
 	"time"
+
+	"github.com/ezerw/wheel/db"
 )
 
 // Turns is the service in charge of interact with the turns table in the database.

@@ -3,12 +3,14 @@ package handler
 import (
 	"context"
 	"database/sql"
+
+	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
+
 	"github.com/ezerw/wheel/db"
 	"github.com/ezerw/wheel/middleware"
 	"github.com/ezerw/wheel/service"
 	"github.com/ezerw/wheel/util"
-	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 )
 
 // Server serves HTTP requests for our wheel api.
