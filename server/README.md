@@ -182,10 +182,7 @@ Optional Query params:
       "person_id": 2,
       "team_id": 1,
       "date": "2021-05-18T00:00:00+12:00",
-      "created_at": {
-        "Time": "2021-05-17T00:26:43+12:00",
-        "Valid": true
-      }
+      "created_at": "2021-05-17T04:11:32+12:00"
     },
     ...
   ]
@@ -205,10 +202,7 @@ POST `/api/teams/{team}/turns`
     "person_id": 1,
     "team_id": 1,
     "date": "2021-05-18T00:00:00+12:00",
-    "created_at": {
-      "Time": "0001-01-01T00:00:00Z",
-      "Valid": false
-    }
+    "created_at": "2021-05-17T04:11:32+12:00"
   }
 }
 ```

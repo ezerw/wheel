@@ -11,6 +11,15 @@ type Turns struct {
 	store db.Store
 }
 
+// TurnAPI is the representation returned to the client
+type TurnAPI struct {
+	ID        int64     `json:"id"`
+	PersonID  int64     `json:"person_id"`
+	TeamID    int64     `json:"team_id"`
+	Date      time.Time `json:"date"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 // NewTurns creates a new TeamsService instance.
 func NewTurns(store db.Store) *Turns {
 	return &Turns{store: store}
@@ -24,7 +33,7 @@ func (s *Turns) ListTurns(
 	dateTo time.Time,
 	limit int64,
 	offset int64,
-) ([]db.Turn, error) {
+) ([]TurnAPI, error) {
 	if !dateFrom.IsZero() && !dateTo.IsZero() {
 		args := db.ListTurnsWithBothDatesParams{
 			TeamID: teamID,
@@ -33,7 +42,13 @@ func (s *Turns) ListTurns(
 			Limit:  int32(limit),
 			Offset: int32(offset),
 		}
-		return s.store.ListTurnsWithBothDates(ctx, args)
+		turns, err := s.store.ListTurnsWithBothDates(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+
+		apiTurns := s.listToAPI(turns)
+		return apiTurns, nil
 	}
 
 	if !dateFrom.IsZero() {
@@ -43,7 +58,12 @@ func (s *Turns) ListTurns(
 			Limit:  int32(limit),
 			Offset: int32(offset),
 		}
-		return s.store.ListTurnsWithDateFrom(ctx, args)
+		turns, err := s.store.ListTurnsWithDateFrom(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		apiTurns := s.listToAPI(turns)
+		return apiTurns, nil
 	}
 
 	if !dateTo.IsZero() {
@@ -53,7 +73,12 @@ func (s *Turns) ListTurns(
 			Limit:  int32(limit),
 			Offset: int32(offset),
 		}
-		return s.store.ListTurnsWithDateTo(ctx, args)
+		turns, err := s.store.ListTurnsWithDateTo(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		apiTurns := s.listToAPI(turns)
+		return apiTurns, nil
 	}
 
 	args := db.ListTurnsParams{
@@ -61,31 +86,40 @@ func (s *Turns) ListTurns(
 		Limit:  int32(limit),
 		Offset: int32(offset),
 	}
-	return s.store.ListTurns(ctx, args)
+	turns, err := s.store.ListTurns(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+	apiTurns := s.listToAPI(turns)
+	return apiTurns, nil
 }
 
 // GetTurn gets one turn from the DB using id and teamID as params.
-func (s *Turns) GetTurn(ctx context.Context, args db.GetTurnParams) (*db.Turn, error) {
+func (s *Turns) GetTurn(ctx context.Context, args db.GetTurnParams) (*TurnAPI, error) {
 	turn, err := s.store.GetTurn(ctx, args)
 	if err != nil {
 		return nil, err
 	}
 
-	return &turn, nil
+	apiTurn := s.singleToAPI(&turn)
+
+	return apiTurn, nil
 }
 
 // GetTurnByDate gets one turn from the DB using date and teamID as params.
-func (s *Turns) GetTurnByDate(ctx context.Context, args db.GetTurnByDateParams) (*db.Turn, error) {
+func (s *Turns) GetTurnByDate(ctx context.Context, args db.GetTurnByDateParams) (*TurnAPI, error) {
 	turn, err := s.store.GetTurnByDate(ctx, args)
 	if err != nil {
 		return nil, err
 	}
 
-	return &turn, nil
+	apiTurn := s.singleToAPI(&turn)
+
+	return apiTurn, nil
 }
 
 // AddTurn adds a turn to the DB for the specified team.
-func (s *Turns) AddTurn(ctx context.Context, teamID int64, personID int64, date time.Time) (*db.Turn, error) {
+func (s *Turns) AddTurn(ctx context.Context, teamID int64, personID int64, date time.Time) (*TurnAPI, error) {
 	args := db.CreateTurnParams{
 		PersonID: personID,
 		TeamID:   teamID,
@@ -116,16 +150,47 @@ func (s *Turns) AddTurn(ctx context.Context, teamID int64, personID int64, date 
 }
 
 // UpdateTurn updates a turn in the DB.
-func (s *Turns) UpdateTurn(ctx context.Context, args db.UpdateTurnParams) (*db.Turn, error) {
+func (s *Turns) UpdateTurn(ctx context.Context, args db.UpdateTurnParams) (*TurnAPI, error) {
 	_, err := s.store.UpdateTurn(ctx, args)
 	if err != nil {
 		return nil, err
 	}
 
-	return &db.Turn{
-		ID:       args.ID,
-		PersonID: args.PersonID,
-		TeamID:   args.TeamID,
-		Date:     args.Date,
-	}, nil
+	params := db.GetTurnParams{
+		ID:     args.ID,
+		TeamID: args.TeamID,
+	}
+	turn, err := s.GetTurn(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	return turn, nil
+}
+
+// singleToAPI converts the DB struct to an API representation of it.
+func (s *Turns) singleToAPI(dbTurn *db.Turn) *TurnAPI {
+	return &TurnAPI{
+		ID:        dbTurn.ID,
+		PersonID:  dbTurn.PersonID,
+		TeamID:    dbTurn.TeamID,
+		Date:      dbTurn.Date,
+		CreatedAt: dbTurn.CreatedAt.Time,
+	}
+}
+
+// listToAPI converts a list of DB structs to an API representation of them.
+func (s *Turns) listToAPI(dbTurns []db.Turn) []TurnAPI {
+	var turns []TurnAPI
+
+	for _, turn := range dbTurns {
+		turns = append(turns, TurnAPI{
+			ID:        turn.ID,
+			PersonID:  turn.PersonID,
+			TeamID:    turn.TeamID,
+			Date:      turn.Date,
+			CreatedAt: turn.CreatedAt.Time,
+		})
+	}
+
+	return turns
 }
