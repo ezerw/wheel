@@ -30,9 +30,9 @@ GET `/api/teams/{team}`
       "people": [
         {
           "id": 1,
-          "first_name": "Eze",
-          "last_name": "Rodriguez",
-          "email": "eze.rodriguez@vendhq.com",
+          "first_name": "Natasha",
+          "last_name": "Romanoff",
+          "email": "b.widow88@vendhq.com",
           "team_id": 1
         },
         ...
@@ -90,9 +90,9 @@ GET `/api/teams/{team}/people`
   "data": [
     {
       "id": 1,
-      "first_name": "Eze",
-      "last_name": "Rodriguez",
-      "email": "eze.rodriguez@vendhq.com",
+      "first_name": "Bartholomew Henry",
+      "last_name": "Allen",
+      "email": "speed@vendhq.com",
       "team_id": 1
     },
      ...
@@ -106,9 +106,9 @@ GET `/api/teams/{team}/people/{person}`
 {
   "data": {
     "id": 1,
-    "first_name": "Eze",
-    "last_name": "Rodriguez",
-    "email": "eze.rodriguez@vendhq.com",
+    "first_name": "Anthony Edward",
+    "last_name": "Stark",
+    "email": "iron@vendhq.com",
     "team_id": 1
   }
 }
