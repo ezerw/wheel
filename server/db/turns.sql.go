@@ -66,7 +66,77 @@ func (q *Queries) GetTurn(ctx context.Context, arg GetTurnParams) (Turn, error) 
 	return i, err
 }
 
+const getTurnByDate = `-- name: GetTurnByDate :one
+SELECT id, person_id, team_id, date, created_at
+FROM turns
+WHERE date = ?
+AND team_id = ?
+LIMIT 1
+`
+
+type GetTurnByDateParams struct {
+	Date   time.Time `json:"date"`
+	TeamID int64     `json:"team_id"`
+}
+
+func (q *Queries) GetTurnByDate(ctx context.Context, arg GetTurnByDateParams) (Turn, error) {
+	row := q.db.QueryRowContext(ctx, getTurnByDate, arg.Date, arg.TeamID)
+	var i Turn
+	err := row.Scan(
+		&i.ID,
+		&i.PersonID,
+		&i.TeamID,
+		&i.Date,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listTurns = `-- name: ListTurns :many
+SELECT id, person_id, team_id, date, created_at
+FROM turns
+WHERE team_id = ?
+ORDER BY date DESC
+LIMIT ?
+OFFSET ?
+`
+
+type ListTurnsParams struct {
+	TeamID int64 `json:"team_id"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) ListTurns(ctx context.Context, arg ListTurnsParams) ([]Turn, error) {
+	rows, err := q.db.QueryContext(ctx, listTurns, arg.TeamID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Turn{}
+	for rows.Next() {
+		var i Turn
+		if err := rows.Scan(
+			&i.ID,
+			&i.PersonID,
+			&i.TeamID,
+			&i.Date,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTurnsWithBothDates = `-- name: ListTurnsWithBothDates :many
 SELECT id, person_id, team_id, date, created_at
 FROM turns
 WHERE team_id = ?
@@ -77,7 +147,7 @@ LIMIT ?
 OFFSET ?
 `
 
-type ListTurnsParams struct {
+type ListTurnsWithBothDatesParams struct {
 	TeamID int64     `json:"team_id"`
 	Date   time.Time `json:"date"`
 	Date_2 time.Time `json:"date_2"`
@@ -85,11 +155,113 @@ type ListTurnsParams struct {
 	Offset int32     `json:"offset"`
 }
 
-func (q *Queries) ListTurns(ctx context.Context, arg ListTurnsParams) ([]Turn, error) {
-	rows, err := q.db.QueryContext(ctx, listTurns,
+func (q *Queries) ListTurnsWithBothDates(ctx context.Context, arg ListTurnsWithBothDatesParams) ([]Turn, error) {
+	rows, err := q.db.QueryContext(ctx, listTurnsWithBothDates,
 		arg.TeamID,
 		arg.Date,
 		arg.Date_2,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Turn{}
+	for rows.Next() {
+		var i Turn
+		if err := rows.Scan(
+			&i.ID,
+			&i.PersonID,
+			&i.TeamID,
+			&i.Date,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTurnsWithDateFrom = `-- name: ListTurnsWithDateFrom :many
+SELECT id, person_id, team_id, date, created_at
+FROM turns
+WHERE team_id = ?
+AND date >= ?
+ORDER BY date DESC
+LIMIT ?
+OFFSET ?
+`
+
+type ListTurnsWithDateFromParams struct {
+	TeamID int64     `json:"team_id"`
+	Date   time.Time `json:"date"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+func (q *Queries) ListTurnsWithDateFrom(ctx context.Context, arg ListTurnsWithDateFromParams) ([]Turn, error) {
+	rows, err := q.db.QueryContext(ctx, listTurnsWithDateFrom,
+		arg.TeamID,
+		arg.Date,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Turn{}
+	for rows.Next() {
+		var i Turn
+		if err := rows.Scan(
+			&i.ID,
+			&i.PersonID,
+			&i.TeamID,
+			&i.Date,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTurnsWithDateTo = `-- name: ListTurnsWithDateTo :many
+SELECT id, person_id, team_id, date, created_at
+FROM turns
+WHERE team_id = ?
+AND date <= ?
+ORDER BY date DESC
+LIMIT ?
+OFFSET ?
+`
+
+type ListTurnsWithDateToParams struct {
+	TeamID int64     `json:"team_id"`
+	Date   time.Time `json:"date"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+func (q *Queries) ListTurnsWithDateTo(ctx context.Context, arg ListTurnsWithDateToParams) ([]Turn, error) {
+	rows, err := q.db.QueryContext(ctx, listTurnsWithDateTo,
+		arg.TeamID,
+		arg.Date,
 		arg.Limit,
 		arg.Offset,
 	)

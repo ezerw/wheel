@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
 
 	"github.com/ezerw/wheel/db"
@@ -14,15 +13,25 @@ import (
 
 // HandleListPeople handles GET request to /api/teams/:team-id/people
 func (s *Server) HandleListPeople(c *gin.Context) {
-	teamID := c.Param("team-id")
+	queryTeamID := c.Param("team-id")
 
-	intTeamID, err := strconv.ParseInt(teamID, 10, 64)
+	teamID, err := strconv.ParseInt(queryTeamID, 10, 64)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	people, err := s.peopleService.ListPeople(c.Request.Context(), intTeamID)
+	exists, err := s.teamExists(c.Request.Context(), teamID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !exists {
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Team not found."})
+		return
+	}
+
+	people, err := s.peopleService.ListPeople(c.Request.Context(), teamID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -33,25 +42,36 @@ func (s *Server) HandleListPeople(c *gin.Context) {
 
 // HandleShowPerson handles GET request to /api/teams/:team-id/people/:person-id
 func (s *Server) HandleShowPerson(c *gin.Context) {
-	teamID := c.Param("team-id")
-	personID := c.Param("person-id")
+	queryTeamID := c.Param("team-id")
+	queryPersonID := c.Param("person-id")
 
-	intTeamID, err := strconv.ParseInt(teamID, 10, 64)
+	teamID, err := strconv.ParseInt(queryTeamID, 10, 64)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	intPersonID, err := strconv.ParseInt(personID, 10, 64)
+	personID, err := strconv.ParseInt(queryPersonID, 10, 64)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	person, err := s.peopleService.GetPerson(c.Request.Context(), db.GetPersonParams{
-		ID:     intPersonID,
-		TeamID: intTeamID,
-	})
+	exists, err := s.teamExists(c.Request.Context(), teamID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !exists {
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Team not found."})
+		return
+	}
+
+	args := db.GetPersonParams{
+		ID:     personID,
+		TeamID: teamID,
+	}
+	person, err := s.peopleService.GetPerson(c.Request.Context(), args)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -62,11 +82,21 @@ func (s *Server) HandleShowPerson(c *gin.Context) {
 
 // HandleAddPerson handles POST request to /api/teams/:team-id/people
 func (s *Server) HandleAddPerson(c *gin.Context) {
-	teamID := c.Param("team-id")
+	queryTeamID := c.Param("team-id")
 
-	intTeamID, err := strconv.ParseInt(teamID, 10, 64)
+	teamID, err := strconv.ParseInt(queryTeamID, 10, 64)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	exists, err := s.teamExists(c.Request.Context(), teamID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !exists {
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Team not found."})
 		return
 	}
 
@@ -85,18 +115,11 @@ func (s *Server) HandleAddPerson(c *gin.Context) {
 		FirstName: binding.FirstName,
 		LastName:  binding.LastName,
 		Email:     binding.Email,
-		TeamID:    intTeamID,
+		TeamID:    teamID,
 	}
 
 	person, err := s.peopleService.AddPerson(c.Request.Context(), args)
 	if err != nil {
-		errN, _ := err.(*mysql.MySQLError)
-		if errN.Number == 1062 {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-				"error": "The specified email already exists in the database.",
-			})
-			return
-		}
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -106,18 +129,27 @@ func (s *Server) HandleAddPerson(c *gin.Context) {
 
 // HandleUpdatePerson handles PUT request to /api/teams/:team-id/people/:person-id
 func (s *Server) HandleUpdatePerson(c *gin.Context) {
-	teamID := c.Param("team-id")
-	personID := c.Param("person-id")
-
-	intTeamID, err := strconv.ParseInt(teamID, 10, 64)
+	queryTeamID := c.Param("team-id")
+	teamID, err := strconv.ParseInt(queryTeamID, 10, 64)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	intPersonID, err := strconv.ParseInt(personID, 10, 64)
+	queryPersonID := c.Param("person-id")
+	personID, err := strconv.ParseInt(queryPersonID, 10, 64)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	exists, err := s.teamExists(c.Request.Context(), teamID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !exists {
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Team not found."})
 		return
 	}
 
@@ -135,8 +167,8 @@ func (s *Server) HandleUpdatePerson(c *gin.Context) {
 
 	// Check if the person exists in the specified team
 	getPersonArgs := db.GetPersonParams{
-		ID:     intPersonID,
-		TeamID: intTeamID,
+		ID:     personID,
+		TeamID: teamID,
 	}
 	person, err := s.peopleService.GetPerson(c.Request.Context(), getPersonArgs)
 	if err != nil {
@@ -155,7 +187,7 @@ func (s *Server) HandleUpdatePerson(c *gin.Context) {
 		LastName:  binding.LastName,
 		Email:     binding.Email,
 		TeamID:    binding.TeamID,
-		ID:        intPersonID,
+		ID:        personID,
 	}
 
 	person, err = s.peopleService.UpdatePerson(c.Request.Context(), updatePersonArgs)
@@ -169,24 +201,33 @@ func (s *Server) HandleUpdatePerson(c *gin.Context) {
 
 // HandleDeletePerson handles DELETE request to /api/teams/:team-id/people/:person-id
 func (s *Server) HandleDeletePerson(c *gin.Context) {
-	teamID := c.Param("team-id")
-	personID := c.Param("person-id")
-
-	intTeamID, err := strconv.ParseInt(teamID, 10, 64)
+	queryTeamID := c.Param("team-id")
+	teamID, err := strconv.ParseInt(queryTeamID, 10, 64)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	intPersonID, err := strconv.ParseInt(personID, 10, 64)
+	queryPersonID := c.Param("person-id")
+	personID, err := strconv.ParseInt(queryPersonID, 10, 64)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	exists, err := s.teamExists(c.Request.Context(), teamID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !exists {
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Team not found."})
 		return
 	}
 
 	args := db.DeletePersonParams{
-		ID:     intPersonID,
-		TeamID: intTeamID,
+		ID:     personID,
+		TeamID: teamID,
 	}
 
 	err = s.peopleService.DeletePerson(c.Request.Context(), args)

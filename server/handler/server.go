@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"context"
+	"database/sql"
 	"github.com/ezerw/wheel/db"
 	"github.com/ezerw/wheel/middleware"
 	"github.com/ezerw/wheel/service"
 	"github.com/ezerw/wheel/util"
 	"github.com/gin-gonic/gin"
-	"time"
+	"github.com/pkg/errors"
 )
 
 // Server serves HTTP requests for our wheel api.
@@ -36,10 +38,12 @@ func (s *Server) Start(address string) error {
 	return s.router.Run(address)
 }
 
+// setupRouter defines a router and add routes to it.
 func (s *Server) setupRouter() {
 	router := gin.Default()
 	router.Use(middleware.Cors())
 
+	// TODO: authenticate requests
 	auth := router.Group("/api")
 
 	// teams
@@ -58,41 +62,19 @@ func (s *Server) setupRouter() {
 
 	// team turns
 	auth.GET("/teams/:team-id/turns", s.HandleListTurns)
-	auth.POST("/teams/:team-id/turns", s.HandleAddTurn)
-	auth.DELETE("/teams/:team-id/turns/:turn-id", s.HandleDeleteTurn)
+	auth.POST("/teams/:team-id/turns", s.HandleUpsertTurn)
 
 	s.router = router
 }
 
-// checkTeamExists checks whether the passed teamID correspond to an existent team in the DB.
-//func (s *Server) checkTeamExists(teamID string) bool {
-//	var team model.Team
-//
-//	err := h.DB.Get(&team, "SELECT id FROM teams WHERE id=?", teamID)
-//	if err != nil {
-//		if errors.Is(sql.ErrNoRows, err) {
-//			return false
-//		}
-//		return false
-//	}
-//	return true
-//}
-
-// getNextWorkingDay returns the next working day based in the day passed as parameter.
-func (s *Server) getNextWorkingDay(today time.Time, loc time.Location) (*time.Time, error) {
-	var next time.Time
-
-	year, month, day := today.Date()
-	tomorrow := time.Date(year, month, day+1, 0, 0, 0, 0, &loc)
-
-	switch tomorrow.Weekday() {
-	case time.Saturday:
-		next = tomorrow.Add(48 * time.Hour)
-	case time.Sunday:
-		next = tomorrow.Add(24 * time.Hour)
-	default:
-		next = tomorrow
+// teamExists checks if the specified teamID exists in the DB.
+func (s *Server) teamExists(ctx context.Context, teamID int64) (bool, error) {
+	_, err := s.teamsService.GetTeam(ctx, teamID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, nil
 	}
-
-	return &next, nil
+	return true, nil
 }

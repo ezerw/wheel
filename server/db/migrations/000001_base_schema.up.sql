@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS turns (
      person_id BIGINT NOT NULL,
      team_id BIGINT NOT NULL,
      date DATE NOT NULL,
-     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+     created_at DATETIME DEFAULT NOW(),
      UNIQUE(team_id, date),
      FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
 );

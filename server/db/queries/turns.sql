@@ -2,6 +2,32 @@
 SELECT id, person_id, team_id, date, created_at
 FROM turns
 WHERE team_id = ?
+ORDER BY date DESC
+LIMIT ?
+OFFSET ?;
+
+-- name: ListTurnsWithDateFrom :many
+SELECT id, person_id, team_id, date, created_at
+FROM turns
+WHERE team_id = ?
+AND date >= ?
+ORDER BY date DESC
+LIMIT ?
+OFFSET ?;
+
+-- name: ListTurnsWithDateTo :many
+SELECT id, person_id, team_id, date, created_at
+FROM turns
+WHERE team_id = ?
+AND date <= ?
+ORDER BY date DESC
+LIMIT ?
+OFFSET ?;
+
+-- name: ListTurnsWithBothDates :many
+SELECT id, person_id, team_id, date, created_at
+FROM turns
+WHERE team_id = ?
 AND date >= ?
 AND date <= ?
 ORDER BY date DESC
@@ -12,6 +38,13 @@ OFFSET ?;
 SELECT id, person_id, team_id, date, created_at
 FROM turns
 WHERE id = ?
+AND team_id = ?
+LIMIT 1;
+
+-- name: GetTurnByDate :one
+SELECT id, person_id, team_id, date, created_at
+FROM turns
+WHERE date = ?
 AND team_id = ?
 LIMIT 1;
 

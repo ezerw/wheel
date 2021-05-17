@@ -24,14 +24,14 @@ func (s *Server) HandleListTeams(c *gin.Context) {
 
 // HandleShowTeam handles GET request to /api/teams/:team-id
 func (s *Server) HandleShowTeam(c *gin.Context) {
-	teamID := c.Param("team-id")
-	intTeamID, err := strconv.ParseInt(teamID, 10, 64)
+	queryTeamID := c.Param("team-id")
+	teamID, err := strconv.ParseInt(queryTeamID, 10, 64)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	team, err := s.teamsService.GetTeam(c.Request.Context(), intTeamID)
+	team, err := s.teamsService.GetTeam(c.Request.Context(), teamID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
@@ -53,7 +53,7 @@ func (s *Server) HandleShowTeam(c *gin.Context) {
 	composite.TeamName = team.Name
 	composite.TeamID = team.ID
 
-	people, _ := s.peopleService.ListPeople(c.Request.Context(), intTeamID)
+	people, _ := s.peopleService.ListPeople(c.Request.Context(), teamID)
 	composite.People = people
 
 	c.JSON(http.StatusOK, gin.H{"data": composite})
@@ -81,8 +81,8 @@ func (s *Server) HandleAddTeam(c *gin.Context) {
 
 // HandleUpdateTeam handles PUT request to /api/teams/:team-id
 func (s *Server) HandleUpdateTeam(c *gin.Context) {
-	teamID := c.Param("team-id")
-	intTeamID, err := strconv.ParseInt(teamID, 10, 64)
+	queryTeamID := c.Param("team-id")
+	teamID, err := strconv.ParseInt(queryTeamID, 10, 64)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -97,19 +97,19 @@ func (s *Server) HandleUpdateTeam(c *gin.Context) {
 		return
 	}
 
-	_, err = s.teamsService.GetTeam(c.Request.Context(), intTeamID)
+	exists, err := s.teamExists(c.Request.Context(), teamID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
-				"error": "Team not found.",
-			})
-			return
-		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !exists {
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Team not found."})
+		return
 	}
 
 	updateTeamArgs := db.UpdateTeamParams{
 		Name: binding.Name,
-		ID:   intTeamID,
+		ID:   teamID,
 	}
 
 	team, err := s.teamsService.UpdateTeam(c.Request.Context(), updateTeamArgs)
@@ -123,15 +123,24 @@ func (s *Server) HandleUpdateTeam(c *gin.Context) {
 
 // HandleDeleteTeam handles DELETE request to /api/teams/:team-id
 func (s *Server) HandleDeleteTeam(c *gin.Context) {
-	teamID := c.Param("team-id")
-
-	intTeamID, err := strconv.ParseInt(teamID, 10, 64)
+	queryTeamID := c.Param("team-id")
+	teamID, err := strconv.ParseInt(queryTeamID, 10, 64)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	err = s.teamsService.DeleteTeam(c.Request.Context(), intTeamID)
+	exists, err := s.teamExists(c.Request.Context(), teamID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !exists {
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Team not found."})
+		return
+	}
+
+	err = s.teamsService.DeleteTeam(c.Request.Context(), teamID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

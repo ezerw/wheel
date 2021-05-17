@@ -1,232 +1,177 @@
 package handler
 
 import (
+	"database/sql"
 	"github.com/ezerw/wheel/db"
-	"github.com/gin-gonic/gin"
+	"github.com/ezerw/wheel/util"
+	"github.com/pkg/errors"
+	"net/http"
+	"strconv"
 	"time"
 	_ "time/tzdata" // required
 
+	"github.com/gin-gonic/gin"
 )
 
+// HandleListTurns handles GET requests to /api/teams/:team-id/turns
+// it accepts the following query params:
+// - limit [Default to 10]
+// - offset [Default to 0]
+// - date_from [Format: YYYY-MM-DD]
+// - date_to [Format: YYYY-MM-DD]
 func (s *Server) HandleListTurns(c *gin.Context) {
-
-	args := db.ListTurnsParams{
-		TeamID: 0,
-		Date:   time.Time{},
-		Date_2: time.Time{},
-		Limit:  0,
-		Offset: 0,
+	queryLimit := c.DefaultQuery("limit", "10")
+	limit, err := strconv.ParseInt(queryLimit, 10, 64)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "limit invalid format."})
+		return
 	}
 
-	turns, err := s.turnsService.ListTurns(c.Request, )
+	queryOffset := c.DefaultQuery("offset", "0")
+	offset, err := strconv.ParseInt(queryOffset, 10, 64)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "offset invalid format."})
+		return
+	}
 
+	queryTeamID := c.Param("team-id")
+	teamID, err := strconv.ParseInt(queryTeamID, 10, 64)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "team_id invalid format"})
+		return
+	}
+
+	exists, err := s.teamExists(c.Request.Context(), teamID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !exists {
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Team not found."})
+		return
+	}
+
+	var (
+		dateFrom time.Time
+		dateTo   time.Time
+	)
+
+	loc, err := time.LoadLocation("Pacific/Auckland")
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to load location: " + err.Error()})
+		return
+	}
+
+	queryDateFrom := c.Query("date_from")
+	if queryDateFrom != "" {
+		dateFrom, err = time.ParseInLocation("2006-01-02", queryDateFrom, loc)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "date_from invalid format."})
+			return
+		}
+	}
+
+	queryDateTo := c.Query("date_to")
+	if queryDateTo != "" {
+		dateTo, err = time.ParseInLocation("2006-01-02", queryDateTo, loc)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "date_to invalid format."})
+			return
+		}
+	}
+
+	turns, err := s.turnsService.ListTurns(c.Request.Context(), teamID, dateFrom, dateTo, limit, offset)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": turns})
 }
 
-//var dateLayout = "2006-01-02"
+// HandleUpsertTurn handles POST request to /api/teams/:team-id/turns
+// if the specified date has already a turn for the team it will update the person assigned
+// if it doesn't exist will create the turn.
+// DB unique: (team_id, date) - A team can't have multiple people assigned for the same date.
+func (s *Server) HandleUpsertTurn(c *gin.Context) {
+	queryTeamID := c.Param("team-id")
+	teamID, err := strconv.ParseInt(queryTeamID, 10, 64)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "team_id invalid format"})
+		return
+	}
+	teamExists, err := s.teamExists(c.Request.Context(), teamID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !teamExists {
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Team not found."})
+		return
+	}
 
-//// HandleListTurns handles GET request to /api/teams/:team-id/turns
-//func (s *Server) HandleListTurns(c *gin.Context) {
-//	teamID := c.Param("team-id")
-//
-//	teamExists := h.checkTeamExists(teamID)
-//	if !teamExists {
-//		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "team not found"})
-//		return
-//	}
-//
-//	ql := c.DefaultQuery("limit", "10")
-//	offset := c.DefaultQuery("offset", "0")
-//	qo := c.DefaultQuery("order", "desc")
-//	qdf := c.Query("date_from")
-//	qdt := c.Query("date_to")
-//
-//	// validate order
-//	order := "desc"
-//	for _, o := range []string{"asc", "desc"} {
-//		if o == qo {
-//			order = qo
-//		}
-//	}
-//
-//	turns := []model.Turn{}
-//	// params
-//	var args []interface{}
-//
-//	turnsSQL := `
-//		SELECT
-//			turns.id,
-//			turns.date,
-//			turns.created_at,
-//			people.id "person.id",
-//			people.first_name "person.first_name",
-//			people.last_name "person.last_name"
-//		FROM turns
-//		JOIN people ON turns.person_id = people.id `
-//
-//	// Flag that says if date_from is present to format the date_to if needed
-//	hasDf := false
-//
-//	// Conditionally apply date range filters
-//	if qdf != "" {
-//		df, err := time.Parse(dateLayout, qdf)
-//		if err != nil {
-//			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "date_from invalid format."})
-//			return
-//		}
-//		hasDf = true
-//		turnsSQL += "WHERE turns.date >= ? "
-//		args = append(args, df.Format(dateLayout))
-//	}
-//
-//	if qdt != "" {
-//		dt, err := time.Parse(dateLayout, qdt)
-//		if err != nil {
-//			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "date_to invalid format."})
-//			return
-//		}
-//
-//		if hasDf {
-//			turnsSQL += "AND turns.date <= ? "
-//		} else {
-//			turnsSQL += "WHERE turns.date <= ? "
-//		}
-//		args = append(args, dt.Format(dateLayout))
-//	}
-//
-//	// add limit and offset last
-//	args = append(args, ql, offset)
-//	turnsSQL += "ORDER BY turns.date %s LIMIT ? OFFSET ?;"
-//
-//	err := h.DB.Select(&turns, fmt.Sprintf(turnsSQL, order), args...)
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-//		return
-//	}
-//
-//	c.JSON(http.StatusOK, gin.H{"data": turns})
-//}
-//
-//// HandleShowTurn handles GET request to /api/teams/:team-id/turns/:turn-id
-//func (s *Server) HandleShowTurn(c *gin.Context){}
-//
-//// HandleCreateTurn handles POST request to /api/teams/:team-id/turns
-//func (s *Server) HandleCreateTurn(c *gin.Context) {
-//	teamID := c.Param("team-id")
-//
-//	teamExists := h.checkTeamExists(teamID)
-//	if !teamExists {
-//		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "team not found"})
-//		return
-//	}
-//
-//	binding := struct {
-//		PersonID int `json:"person_id" binding:"required"`
-//	}{}
-//
-//	err := c.BindJSON(&binding)
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-//		return
-//	}
-//
-//	person := model.Person{}
-//	err = h.DB.Get(&person, `SELECT id, first_name, last_name, team_id FROM people WHERE id = ? AND team_id = ?`, binding.PersonID, teamID)
-//	if err != nil {
-//		if errors.Is(sql.ErrNoRows, err) {
-//			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "person not found in specified team"})
-//			return
-//		}
-//		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-//		return
-//	}
-//
-//	loc, err := time.LoadLocation("Pacific/Auckland")
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-//		return
-//	}
-//
-//	today := time.Now().In(loc)
-//	date, err := h.getNextWorkingDay(today, *loc)
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-//		return
-//	}
-//
-//	turn := model.Turn{
-//		Date:      *date,
-//		CreatedAt: today,
-//		PersonID:  person.ID,
-//		TeamID:    person.TeamID,
-//	}
-//
-//	insertTurnSQL := `
-//		REPLACE INTO turns (person_id, team_id, date, created_at)
-//		VALUES (:person_id, :team_id, :date, :created_at);`
-//
-//	res, err := h.DB.NamedExec(insertTurnSQL, &turn)
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-//		return
-//	}
-//	lid, err := res.LastInsertId()
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-//		return
-//	}
-//
-//	turnSQL := `
-//		SELECT
-//			turns.id,
-//			turns.date,
-//			turns.created_at,
-//			people.id "person.id",
-//			people.first_name "person.first_name",
-//			people.last_name "person.last_name"
-//		FROM turns
-//		JOIN people ON turns.person_id = people.id
-//		WHERE turns.id = ?`
-//
-//	t := model.Turn{}
-//	err = h.DB.Get(&t, turnSQL, lid)
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-//		return
-//	}
-//
-//	c.JSON(http.StatusCreated, gin.H{"data": t})
-//}
-//
-//// HandleUpdateTurn handles PUT request to /api/teams/:team-id/turns/:turn-id
-//func (s *Server) HandleUpdateTurn(c *gin.Context) {}
-//
-//// HandleDeleteTurn handles DELETE request to /api/teams/:team-id/turns/:turn-id
-//func (s *Server) HandleDeleteTurn(c *gin.Context) {
-//	teamID := c.Param("team-id")
-//	turnID := c.Param("turn-id")
-//
-//	teamExists := h.checkTeamExists(teamID)
-//	if !teamExists {
-//		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "team not found"})
-//		return
-//	}
-//
-//	rows, err := h.DB.Exec("DELETE FROM turns WHERE id=?", turnID)
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-//		return
-//	}
-//
-//	ar, err := rows.RowsAffected()
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-//		return
-//	}
-//
-//	if ar == 0 {
-//		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "turn not found"})
-//		return
-//	}
-//
-//	c.Writer.WriteHeader(http.StatusOK)
-//}
+	// Only required person as date will be calculated.
+	binding := struct {
+		PersonID int64 `json:"person_id" binding:"required"`
+	}{}
+	err = c.BindJSON(&binding)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	getPersonArgs := db.GetPersonParams{
+		ID:     binding.PersonID,
+		TeamID: teamID,
+	}
+	person, err := s.peopleService.GetPerson(c.Request.Context(), getPersonArgs)
+	if err != nil {
+		if errors.Is(sql.ErrNoRows, err) {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Person not found in the specified team"})
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	date, err := util.GetNextWorkingDay()
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "error getting next working day"})
+		return
+	}
+
+	// Lookup the specified turn by date and team
+	getTurnArgs := db.GetTurnByDateParams{
+		Date:   *date,
+		TeamID: person.TeamID,
+	}
+	turn, err := s.turnsService.GetTurnByDate(c.Request.Context(), getTurnArgs)
+	if err != nil {
+		if errors.Is(sql.ErrNoRows, err) {
+			// if it doesn't exist create it and return
+			turn, err = s.turnsService.AddTurn(c.Request.Context(), person.TeamID, person.ID, *date)
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"data": turn})
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// if it does exist, update it
+	updateTurnArgs := db.UpdateTurnParams{
+		PersonID: person.ID,
+		TeamID:   turn.TeamID,
+		Date:     turn.Date,
+		ID:       turn.ID,
+	}
+	turn, err = s.turnsService.UpdateTurn(c.Request.Context(), updateTurnArgs)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": turn})
+}
